@@ -1,6 +1,6 @@
 # ImageViewPlus
 ImageViewPlus is an extension of ImageView to enhance its functionality.
- - Top-aligned scale mode to enable a top-aligned image inside of an ImageViewPlus (`top_crop`)
+ - Top-aligned scale mode to enable a top-aligned image inside of an ImageViewPlus (`topCrop`)
  - Layer drawable defines the wrapper drawable to use for content. This is useful for adding a selector for states on the ImageView when the states have overlay on the content drawable
  - Default drawable (for when no drawable is set)
 
@@ -46,7 +46,7 @@ To use `ImageViewPlus` in your layout:
                     android:layout_width="match_parent"
                     android:layout_height="210dp"
                     android:src="@drawable/example_image"
-                    app:scaleType="fitCenter"
+                    app:scaleType="topCrop"
                     app:layerDrawable="@drawable/image_selector"
                     app:contentLayerId="@id/content_drawable" />
             

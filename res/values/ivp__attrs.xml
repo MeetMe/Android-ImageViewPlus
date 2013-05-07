@@ -37,7 +37,7 @@
             <enum name="center" value="5" />
             <enum name="centerCrop" value="6" />
             <enum name="centerInside" value="7" />
-            <enum name="top_crop" value="8" />
+            <enum name="topCrop" value="8" />
         </attr>
     </declare-styleable>
 

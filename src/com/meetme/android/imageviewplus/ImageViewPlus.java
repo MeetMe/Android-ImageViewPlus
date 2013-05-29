@@ -238,7 +238,7 @@ public class ImageViewPlus extends ImageView {
     }
 
     private void resolveUri() {
-        if (mContentDrawable != null) {
+        if (mContentDrawable != null && mContentDrawable != mDefaultDrawable) {
             return;
         }
 

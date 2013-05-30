@@ -307,7 +307,7 @@ public class ImageViewPlus extends ImageView {
         if (mLayerDrawable != null) {
             if (drawable == null) {
                 // We need a placeholder drawable for the LayerDrawable
-                drawable = new ShapeDrawable();
+                drawable = new ShapeDrawable(new RectShape());
             }
 
             // FIXME there is probably a better workaround for doing this to include re-requesting layoud if the content drawable is new and not

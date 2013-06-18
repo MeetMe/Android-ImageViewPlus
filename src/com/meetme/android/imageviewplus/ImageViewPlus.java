@@ -476,17 +476,28 @@ public class ImageViewPlus extends ImageView {
     protected boolean setFrame(int l, int t, int r, int b) {
         if (PlusScaleType.TOP_CROP.equals(mScaleType)) {
             Drawable drawable = super.getDrawable();
-            Matrix matrix = new Matrix();
 
             if (drawable != null) {
                 float floatLeft = (float) l;
                 float floatRight = (float) r;
+
                 float intrinsicWidth = drawable.getIntrinsicWidth();
+                float intrinsicHeight = drawable.getIntrinsicHeight();
+
+                int frameHeight = b - t;
 
                 if (intrinsicWidth != -1) {
                     float scaleFactor = (floatRight - floatLeft) / intrinsicWidth;
-                    matrix.setScale(scaleFactor, scaleFactor);
-                    setImageMatrix(matrix);
+
+                    if (scaleFactor * intrinsicHeight < frameHeight) {
+                        setScaleType(ScaleType.CENTER_CROP);
+                    } else {
+                        Matrix matrix = new Matrix();
+                        // scale width
+                        matrix.setScale(scaleFactor, scaleFactor);
+                        setImageMatrix(matrix);
+                    }
+
                 }
             }
         }

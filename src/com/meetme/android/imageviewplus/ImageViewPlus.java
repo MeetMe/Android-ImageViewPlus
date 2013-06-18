@@ -492,6 +492,7 @@ public class ImageViewPlus extends ImageView {
                     if (scaleFactor * intrinsicHeight < frameHeight) {
                         setScaleType(ScaleType.CENTER_CROP);
                     } else {
+                        setScaleType(ScaleType.MATRIX);
                         Matrix matrix = new Matrix();
                         // scale width
                         matrix.setScale(scaleFactor, scaleFactor);

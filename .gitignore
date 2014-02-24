@@ -8,3 +8,6 @@ local.properties
 *.BridgeSort
 out/
 tmp/
+
+.gradle/
+build/

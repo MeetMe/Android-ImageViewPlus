@@ -1,0 +1,4 @@
+<resources>
+    <color name="ivp__overlay_pressed">#40000000</color>
+    <color name="ivp__overlay_normal">@android:color/transparent</color>
+</resources>

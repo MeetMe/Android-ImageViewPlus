@@ -1,11 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.meetme.imageviewplus"
-    android:versionCode="1"
-    android:versionName="1.0">
+    package="com.meetme.imageviewplus">
 
     <uses-sdk
         android:minSdkVersion="4"
-        android:targetSdkVersion="17" />
+        android:targetSdkVersion="19" />
 
     <application />
 </manifest>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
    Copyright 2013 MeetMe, Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +25,9 @@
 
         <!-- The layer within the given selectorDrawable -->
         <attr name="contentLayerId" format="integer" />
+
+        <!-- Sets a color (or ColorStateList) as the overlay tint color for this ImageViewPlus. -->
+        <attr name="overlayTintColor" format="reference" />
 
         <!-- The scaleType for the ImageViewPlus; where applicable, these should match the value on the built-in ImageView -->
         <attr name="scaleType">

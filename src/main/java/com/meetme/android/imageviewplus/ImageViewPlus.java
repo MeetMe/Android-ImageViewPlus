@@ -17,31 +17,34 @@
 /* {@formatter:on} */
 package com.meetme.android.imageviewplus;
 
+import com.meetme.imageviewplus.R;
+
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.ColorFilter;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.SparseArray;
 import android.widget.ImageView;
 
-import com.meetme.imageviewplus.R;
-
 /**
- * ImageView implementation that refuses to draw if the referenced Bitmap has been recycled. It also provides a way to set a default Drawable that can
- * be used in the recycled Bitmap's place, or when no other resource has been applied to it.
- * <p />
+ * ImageView implementation that refuses to draw if the referenced Bitmap has been recycled. It also provides a way to set a default Drawable that
+ * can be used in the recycled Bitmap's place, or when no other resource has been applied to it.
+ * <p/>
  * Note that if the intended drawable does get recycled, and this view reverts to back to the default, the application will not be notified. However,
  * the {@link #isShowingDefaultDrawable()} method can be used to determine if the default is currently active.
  */
@@ -75,6 +78,11 @@ public class ImageViewPlus extends ImageView {
 
     private Drawable mContentDrawable;
 
+    /**
+     * The tint/overlay color or ColorStateList used to overlay the image.
+     */
+    private ColorStateList mTintColorList;
+
     private int mContentResource;
 
     private Uri mContentUri;
@@ -89,42 +97,56 @@ public class ImageViewPlus extends ImageView {
 
     public ImageViewPlus(final Context context, final AttributeSet attrs, final int defStyle) {
         super(context, attrs, defStyle);
+        init(context, attrs, defStyle);
+    }
 
+    private void init(Context context, AttributeSet attrs, int defStyle) {
         if (attrs != null) {
-            TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.ImageViewPlus, 0, 0);
-            Drawable defaultDrawable = a.getDrawable(R.styleable.ImageViewPlus_defaultDrawable);
-            Drawable selectorDrawable = a.getDrawable(R.styleable.ImageViewPlus_layerDrawable);
-            int selectorLayerId = a.getResourceId(R.styleable.ImageViewPlus_contentLayerId, CONTENT_LAYER_ID_EMPTY);
-            int scaleType = a.getInt(R.styleable.ImageViewPlus_scaleType, -1);
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ImageViewPlus, 0, 0);
 
-            a.recycle();
+            if (a != null) {
+                Drawable defaultDrawable = a.getDrawable(R.styleable.ImageViewPlus_defaultDrawable);
+                Drawable selectorDrawable = a.getDrawable(R.styleable.ImageViewPlus_layerDrawable);
+                int selectorLayerId = a.getResourceId(R.styleable.ImageViewPlus_contentLayerId, CONTENT_LAYER_ID_EMPTY);
+                int scaleType = a.getInt(R.styleable.ImageViewPlus_scaleType, -1);
 
-            if (scaleType >= 0) {
-                setScaleType(PlusScaleType.getScaleType(scaleType));
-            }
+                mTintColorList = a.getColorStateList(R.styleable.ImageViewPlus_overlayTintColor);
 
-            if (defaultDrawable != null) {
-                setDefaultDrawable(defaultDrawable);
-            }
+                if (mTintColorList == null) {
+                    // Not specified, fall back to default
+                    mTintColorList = context.getResources().getColorStateList(R.color.ivp__overlay);
+                }
 
-            if (selectorDrawable != null && selectorDrawable instanceof LayerDrawable) { // We don't check the value of the selectorLayerId as
-                                                                                         // #setSelectorResources handles that check
-                setLayerResources((LayerDrawable) selectorDrawable, selectorLayerId);
+                a.recycle();
+
+                if (scaleType >= 0) {
+                    setScaleType(PlusScaleType.getScaleType(scaleType));
+                }
+
+                if (defaultDrawable != null) {
+                    setDefaultDrawable(defaultDrawable);
+                }
+
+                if (selectorDrawable instanceof LayerDrawable) { // We don't check the value of the selectorLayerId as
+                    // #setSelectorResources handles that check
+                    setLayerResources((LayerDrawable) selectorDrawable, selectorLayerId);
+                }
+
+                if (mTintColorList != null) {
+                    setColorFilter(mTintColorList.getDefaultColor(), PorterDuff.Mode.SRC_ATOP);
+                }
             }
         }
     }
 
     /**
      * Sets a drawable as the content of this ImageView.
-     *
-     * <p class="note">
+     * <p/>
      * This does Bitmap reading and decoding on the UI thread, which can cause a latency hiccup. If that's a concern, consider using
      * {@link #setImageDrawable(android.graphics.drawable.Drawable)} or {@link #setImageBitmap(android.graphics.Bitmap)} and
      * {@link android.graphics.BitmapFactory} instead.
-     * </p>
      *
      * @param resId the resource identifier of the the drawable
-     *
      * @attr ref android.R.styleable#ImageView_src
      */
     @Override
@@ -140,7 +162,7 @@ public class ImageViewPlus extends ImageView {
 
     /**
      * Sets the content of this ImageView to the specified Uri.
-     *
+     * <p/>
      * <p class="note">
      * This does Bitmap reading and decoding on the UI thread, which can cause a latency hiccup. If that's a concern, consider using
      * {@link #setImageDrawable(android.graphics.drawable.Drawable)} or {@link #setImageBitmap(android.graphics.Bitmap)} and
@@ -153,7 +175,7 @@ public class ImageViewPlus extends ImageView {
     public void setImageURI(Uri uri) {
         if (mContentResource != 0 ||
                 (mContentUri != uri &&
-                (uri == null || mContentUri == null || !uri.equals(mContentUri)))) {
+                        (uri == null || mContentUri == null || !uri.equals(mContentUri)))) {
             updateDrawable(null);
             mContentResource = 0;
             mContentUri = uri;
@@ -197,6 +219,16 @@ public class ImageViewPlus extends ImageView {
         setImageDrawable(new BitmapDrawable(getContext().getResources(), bm));
     }
 
+    @Override
+    protected void drawableStateChanged() {
+        super.drawableStateChanged();
+
+        if (mTintColorList != null && !isInEditMode() && mTintColorList.isStateful()) {
+            int color = mTintColorList.getColorForState(getDrawableState(), Color.TRANSPARENT);
+            setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+        }
+    }
+
     /**
      * @return the LayerDrawable used to wrap content, if any
      */
@@ -236,6 +268,189 @@ public class ImageViewPlus extends ImageView {
             // Our own built-in scale types all use a custom MATRIX implementation
             setScaleType(ImageView.ScaleType.MATRIX);
         }
+    }
+
+    /**
+     * @param mListener the DefaultDrawableListener to set
+     */
+    public void setListener(final DefaultDrawableListener listener) {
+        this.mListener = listener;
+    }
+
+    /**
+     * @return the DefaultDrawableListener
+     */
+    public DefaultDrawableListener getListener() {
+        return mListener;
+    }
+
+    /**
+     * Returns true if this view is referencing a BitmapDrawable, and its Bitmap reference has been recycled.
+     *
+     * @return
+     */
+    public boolean isDrawableRecycled() {
+        final Drawable drawable = getDrawable();
+
+        if (drawable instanceof BitmapDrawable) {
+            final Bitmap bmp = ((BitmapDrawable) drawable).getBitmap();
+
+            if (bmp != null) {
+                return bmp.isRecycled();
+            }
+        } else if (drawable instanceof LayerDrawable) {
+            // This is a somewhat shoddy implementation, but it's quick and gets the job done.
+            final LayerDrawable layerDrawable = (LayerDrawable) drawable;
+
+            // Iterate over the layers; look for a recycled bitmap
+            for (int i = 0; i < (layerDrawable).getNumberOfLayers(); i++) {
+                final Drawable iDrawable = layerDrawable.getDrawable(i);
+
+                if (iDrawable instanceof BitmapDrawable) {
+                    final BitmapDrawable bitmapDrawable = (BitmapDrawable) iDrawable;
+                    final Bitmap bmp = bitmapDrawable.getBitmap();
+
+                    if (bmp != null) {
+                        if (bmp.isRecycled()) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Resets the ImageView resource back to the default.
+     */
+    public void resetToDefault() {
+        setImageDrawable(mDefaultDrawable);
+        clearColorFilter();
+    }
+
+    /**
+     * Returns the view's default drawable.
+     *
+     * @return current default drawable
+     * @attr ref com.myyearbook.m.R.styleable#DownloadableImageView_defaultDrawable
+     * @see #setDefaultDrawable(Drawable)
+     */
+    public Drawable getDefaultDrawable() {
+        return mDefaultDrawable;
+    }
+
+    /**
+     * Returns <code>true</code> if the view is currently referencing the default drawable. If no default has been provided, this method returns
+     * false, even if there is no super-class drawable (i.e., even if both Drawables are null, this method still returns false).
+     * <p/>
+     * <b>Warning</b>: If both attributes refer to the same resource, this will return <code>false</code>. That is because
+     * <code>android:src="@drawable/foo"</code> and <code>app:defaultDrawable="@drawable/foo"</code> both create new (distinct) Drawable instances,
+     * therefore they are not equal.
+     *
+     * @return
+     */
+    public boolean isShowingDefaultDrawable() {
+        if (mDefaultDrawable == null) {
+            return false;
+        }
+
+        return mDefaultDrawable == getDrawable();
+    }
+
+    /**
+     * Sets a drawable as the default drawable for the view.
+     *
+     * @param drawable The drawable to set
+     * @see #getDefaultDrawable()
+     */
+    public void setDefaultDrawable(final Drawable drawable) {
+        final boolean wasDefault = isShowingDefaultDrawable();
+
+        if (mDefaultDrawable != null) {
+            mDefaultDrawable.setCallback(null);
+            unscheduleDrawable(mDefaultDrawable);
+        }
+
+        mDefaultDrawable = drawable;
+
+        if (wasDefault || getDrawable() == null) {
+            setImageDrawable(drawable);
+        }
+    }
+
+    /**
+     * Sets a resource id as the default drawable for the view.
+     *
+     * @param resId The desired resource identifier, as generated by the aapt tool. This integer encodes the package, type, and resource entry. The
+     * value 0 is an invalid identifier.
+     * @attr ref com.myyearbook.m.R.styleable#DownloadableImageView_defaultDrawable
+     * @see #setDefaultDrawable(Drawable)
+     */
+    @SuppressWarnings("unused")
+    public void setDefaultResource(final int resId) {
+        setDefaultDrawable(getResources().getDrawable(resId));
+    }
+
+    /**
+     * Overrides the built-in ImageView onDraw() behavior, in order to intercept a recycled Bitmap, which otherwise causes a crash. If the Bitmap is
+     * recycled, this performs a last-minute replacement using the default drawable.
+     */
+    @Override
+    protected void onDraw(@NonNull final Canvas canvas) {
+        if (isDrawableRecycled()) {
+            performAutoResetDefaultDrawable();
+        }
+
+        super.onDraw(canvas);
+    }
+
+    /**
+     * Performs the automatic reset to the default drawable. This will also dispatch the
+     * {@link DefaultDrawableListener#onAutoResetDefaultDrawable(ImageViewPlus)} callback.
+     *
+     * @see ImageViewPlus#resetToDefault()
+     */
+    protected void performAutoResetDefaultDrawable() {
+        resetToDefault();
+
+        if (mListener != null) {
+            mListener.onAutoResetDefaultDrawable(this);
+        }
+    }
+
+    @Override
+    protected boolean setFrame(int l, int t, int r, int b) {
+        if (PlusScaleType.TOP_CROP.equals(mScaleType)) {
+            Drawable drawable = super.getDrawable();
+
+            if (drawable != null) {
+                float floatLeft = (float) l;
+                float floatRight = (float) r;
+
+                float intrinsicWidth = drawable.getIntrinsicWidth();
+                float intrinsicHeight = drawable.getIntrinsicHeight();
+
+                int frameHeight = b - t;
+
+                if (intrinsicWidth != -1) {
+                    float scaleFactor = (floatRight - floatLeft) / intrinsicWidth;
+
+                    if (scaleFactor * intrinsicHeight < frameHeight) {
+                        setScaleType(ScaleType.CENTER_CROP);
+                    } else {
+                        setScaleType(ScaleType.MATRIX);
+                        Matrix matrix = new Matrix();
+                        // scale width
+                        matrix.setScale(scaleFactor, scaleFactor);
+                        setImageMatrix(matrix);
+                    }
+                }
+            }
+        }
+
+        return super.setFrame(l, t, r, b);
     }
 
     private void resolveUri() {
@@ -311,7 +526,7 @@ public class ImageViewPlus extends ImageView {
                 drawable = new ShapeDrawable(new RectShape());
             }
 
-            // FIXME there is probably a better workaround for doing this to include re-requesting layoud if the content drawable is new and not
+            // FIXME there is probably a better workaround for doing this to include re-requesting layout if the content drawable is new and not
             // equal-dimension
             super.setImageDrawable(null);
 
@@ -324,199 +539,16 @@ public class ImageViewPlus extends ImageView {
     }
 
     /**
-     * @param mListener the DefaultDrawableListener to set
-     */
-    public void setListener(final DefaultDrawableListener listener) {
-        this.mListener = listener;
-    }
-
-    /**
-     * @return the DefaultDrawableListener
-     */
-    public DefaultDrawableListener getListener() {
-        return mListener;
-    }
-
-    /**
-     * Returns true if this view is referencing a BitmapDrawable, and its Bitmap reference has been recycled.
-     *
-     * @return
-     */
-    public boolean isDrawableRecycled() {
-        final Drawable drawable = getDrawable();
-
-        if (drawable instanceof BitmapDrawable) {
-            final Bitmap bmp = ((BitmapDrawable) drawable).getBitmap();
-
-            if (bmp != null) {
-                return bmp.isRecycled();
-            }
-        } else if (drawable instanceof LayerDrawable) {
-            // This is a somewhat shoddy implementation, but it's quick and gets the job done.
-            final LayerDrawable layerDrawable = (LayerDrawable) drawable;
-
-            // Iterate over the layers; look for a recycled bitmap
-            for (int i = 0; i < (layerDrawable).getNumberOfLayers(); i++) {
-                final Drawable iDrawable = layerDrawable.getDrawable(i);
-
-                if (iDrawable instanceof BitmapDrawable) {
-                    final BitmapDrawable bitmapDrawable = (BitmapDrawable) iDrawable;
-                    final Bitmap bmp = bitmapDrawable.getBitmap();
-
-                    if (bmp != null) {
-                        if (bmp.isRecycled()) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Resets the ImageView resource back to the default.
-     */
-    public void resetToDefault() {
-        setImageDrawable(mDefaultDrawable);
-        clearColorFilter();
-    }
-
-    /**
-     * Returns the view's default drawable.
-     *
-     * @return current default drawable
-     * @see #setDefaultDrawable(Drawable)
-     * @attr ref com.myyearbook.m.R.styleable#DownloadableImageView_defaultDrawable
-     */
-    public Drawable getDefaultDrawable() {
-        return mDefaultDrawable;
-    }
-
-    /**
-     * Returns <code>true</code> if the view is currently referencing the default drawable. If no default has been provided, this method returns
-     * false, even if there is no super-class drawable (i.e., even if both Drawables are null, this method still returns false).
-     * <p />
-     * <b>Warning</b>: If both attributes refer to the same resource, this will return <code>false</code>. That is because
-     * <code>android:src="@drawable/foo"</code> and <code>app:defaultDrawable="@drawable/foo"</code> both create new (distinct) Drawable instances,
-     * therefore they are not equal.
-     *
-     * @return
-     */
-    public boolean isShowingDefaultDrawable() {
-        if (mDefaultDrawable == null) {
-            return false;
-        }
-
-        return mDefaultDrawable == getDrawable();
-    }
-
-    /**
-     * Sets a drawable as the default drawable for the view.
-     *
-     * @param drawable The drawable to set
-     * @see #getDefaultDrawable()
-     */
-    public void setDefaultDrawable(final Drawable drawable) {
-        final boolean wasDefault = isShowingDefaultDrawable();
-
-        if (mDefaultDrawable != null) {
-            mDefaultDrawable.setCallback(null);
-            unscheduleDrawable(mDefaultDrawable);
-        }
-
-        mDefaultDrawable = drawable;
-
-        if (wasDefault || getDrawable() == null) {
-            setImageDrawable(drawable);
-        }
-    }
-
-    /**
-     * Sets a resource id as the default drawable for the view.
-     *
-     * @param resId The desired resource identifier, as generated by the aapt tool. This integer encodes the package, type, and resource entry. The
-     * value 0 is an invalid identifier.
-     * @see #setDefaultDrawable(Drawable)
-     * @attr ref com.myyearbook.m.R.styleable#DownloadableImageView_defaultDrawable
-     */
-    public void setDefaultResource(final int resId) {
-        setDefaultDrawable(getResources().getDrawable(resId));
-    }
-
-    /**
-     * Overrides the built-in ImageView onDraw() behavior, in order to intercept a recycled Bitmap, which otherwise causes a crash. If the Bitmap is
-     * recycled, this performs a last-minute replacement using the default drawable.
-     */
-    @Override
-    protected void onDraw(final Canvas canvas) {
-        if (isDrawableRecycled()) {
-            performAutoResetDefaultDrawable();
-        }
-
-        super.onDraw(canvas);
-    }
-
-    /**
-     * Performs the automatic reset to the default drawable. This will also dispatch the
-     * {@link DefaultDrawableListener#onAutoResetDefaultDrawable(ImageViewPlus)} callback.
-     *
-     * @see ImageViewPlus#resetToDefault()
-     */
-    protected void performAutoResetDefaultDrawable() {
-        resetToDefault();
-
-        if (mListener != null) {
-            mListener.onAutoResetDefaultDrawable(this);
-        }
-    }
-
-    @Override
-    protected boolean setFrame(int l, int t, int r, int b) {
-        if (PlusScaleType.TOP_CROP.equals(mScaleType)) {
-            Drawable drawable = super.getDrawable();
-
-            if (drawable != null) {
-                float floatLeft = (float) l;
-                float floatRight = (float) r;
-
-                float intrinsicWidth = drawable.getIntrinsicWidth();
-                float intrinsicHeight = drawable.getIntrinsicHeight();
-
-                int frameHeight = b - t;
-
-                if (intrinsicWidth != -1) {
-                    float scaleFactor = (floatRight - floatLeft) / intrinsicWidth;
-
-                    if (scaleFactor * intrinsicHeight < frameHeight) {
-                        setScaleType(ScaleType.CENTER_CROP);
-                    } else {
-                        setScaleType(ScaleType.MATRIX);
-                        Matrix matrix = new Matrix();
-                        // scale width
-                        matrix.setScale(scaleFactor, scaleFactor);
-                        setImageMatrix(matrix);
-                    }
-
-                }
-            }
-        }
-
-        return super.setFrame(l, t, r, b);
-    }
-
-    /**
      * <code>
-        <enum name="matrix" value="0" />
-        <enum name="fitXY" value="1" />
-        <enum name="fitStart" value="2" />
-        <enum name="fitCenter" value="3" />
-        <enum name="fitEnd" value="4" />
-        <enum name="center" value="5" />
-        <enum name="centerCrop" value="6" />
-        <enum name="centerInside" value="7" />
-        <enum name="top_crop" value="8" />
+     * <enum name="matrix" value="0" />
+     * <enum name="fitXY" value="1" />
+     * <enum name="fitStart" value="2" />
+     * <enum name="fitCenter" value="3" />
+     * <enum name="fitEnd" value="4" />
+     * <enum name="center" value="5" />
+     * <enum name="centerCrop" value="6" />
+     * <enum name="centerInside" value="7" />
+     * <enum name="top_crop" value="8" />
      * </code>
      *
      * @see ImageView.ScaleType

@@ -14,8 +14,8 @@ android {
     buildToolsVersion "19.1.0"
 
     defaultConfig {
-        versionCode 2
-        versionName "2.0"
+        versionCode 3
+        versionName "2.0.1"
     }
 }
 

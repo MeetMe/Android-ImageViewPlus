@@ -19,6 +19,7 @@ package com.meetme.android.imageviewplus;
 
 import com.meetme.imageviewplus.R;
 
+import android.annotation.TargetApi;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -35,6 +36,7 @@ import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 import android.net.Uri;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -133,7 +135,11 @@ public class ImageViewPlus extends ImageView {
                 }
 
                 if (mTintColorList != null) {
-                    setColorFilter(mTintColorList.getDefaultColor(), PorterDuff.Mode.SRC_ATOP);
+                    int color = mTintColorList.getDefaultColor();
+
+                    if (color != Color.TRANSPARENT) {
+                        setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+                    }
                 }
             }
         }
@@ -223,9 +229,43 @@ public class ImageViewPlus extends ImageView {
     protected void drawableStateChanged() {
         super.drawableStateChanged();
 
-        if (mTintColorList != null && !isInEditMode() && mTintColorList.isStateful()) {
+        if (mTintColorList != null && !isInEditMode()) {
+            Drawable d = getDrawable();
+
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN && d instanceof LayerDrawable) {
+                clearColorFilter();
+                // 4.1 has a bug with LayerDrawable and an ImageView's ColorFilter, so apply it directly to the LayerDrawable
+                applyColorFilterToLayerDrawable((LayerDrawable) d);
+            } else if (mTintColorList.isStateful()) {
+                int color = mTintColorList.getColorForState(getDrawableState(), Color.TRANSPARENT);
+
+                if (color == Color.TRANSPARENT) {
+                    clearColorFilter();
+                } else {
+                    setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+                }
+            }
+        }
+    }
+
+    /**
+     * {@link Build.VERSION_CODES#JELLY_BEAN} has a bug when applying a {@link ColorFilter} to the {@link ImageView}, most likely caused by the
+     * requirement to {@link Drawable#mutate()} the drawable.  In those affected versions, we need to clear the ImageView's ColorFilter, and instead
+     * apply the ColorFilter directly to the drawable.
+     *
+     * @param drawable
+     */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    private void applyColorFilterToLayerDrawable(LayerDrawable drawable) {
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN && mTintColorList != null) {
+            clearColorFilter();
             int color = mTintColorList.getColorForState(getDrawableState(), Color.TRANSPARENT);
-            setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+
+            if (color == Color.TRANSPARENT) {
+                drawable.clearColorFilter();
+            } else {
+                drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+            }
         }
     }
 
@@ -327,7 +367,7 @@ public class ImageViewPlus extends ImageView {
      */
     public void resetToDefault() {
         setImageDrawable(mDefaultDrawable);
-        clearColorFilter();
+        refreshDrawableState();
     }
 
     /**
@@ -521,6 +561,10 @@ public class ImageViewPlus extends ImageView {
         mContentDrawable = drawable;
 
         if (mLayerDrawable != null) {
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN) {
+                applyColorFilterToLayerDrawable(mLayerDrawable);
+            }
+
             if (drawable == null) {
                 // We need a placeholder drawable for the LayerDrawable
                 drawable = new ShapeDrawable(new RectShape());
@@ -534,6 +578,10 @@ public class ImageViewPlus extends ImageView {
             mLayerDrawable.setDrawableByLayerId(mContentLayerId, drawable);
             super.setImageDrawable(mLayerDrawable);
         } else {
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN && drawable instanceof LayerDrawable) {
+                applyColorFilterToLayerDrawable((LayerDrawable) drawable);
+            }
+
             super.setImageDrawable(drawable);
         }
     }
